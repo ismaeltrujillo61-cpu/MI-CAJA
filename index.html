@@ -948,9 +948,18 @@ async function importExcelFile(file,tipoDefault){
         s.onload=res;s.onerror=rej;document.head.appendChild(s);
       });
     }
-    const wb=XLSX.read(arrayBuffer,{type:"array",cellDates:false});
+    const wb=XLSX.read(arrayBuffer,{type:"array",cellDates:false,raw:true});
     const ws=wb.Sheets[wb.SheetNames[0]];
-    const rows=XLSX.utils.sheet_to_json(ws,{raw:true,defval:null});
+    // Use header:1 to get raw arrays, then map manually to avoid date format issues
+    const rawArrays=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+    if(rawArrays.length<2){if(statusEl)statusEl.textContent="❌ Archivo vacío";return}
+    // Find header row (first non-empty row)
+    const headerRow=rawArrays[0];
+    const rows=rawArrays.slice(1).filter(r=>r&&r.some(c=>c!=null)).map(r=>{
+      const obj={};
+      headerRow.forEach((h,i)=>{if(h!=null)obj[String(h).trim()]=r[i]??null});
+      return obj;
+    });
     if(statusEl)statusEl.textContent=`Procesando ${rows.length} filas...`;
 
     let imported=0,skipped=0,duplicates=0;
