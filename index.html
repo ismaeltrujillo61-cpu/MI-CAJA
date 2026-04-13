@@ -879,17 +879,16 @@ function parseExcelDate(val){
       return `${y}-${String(mon).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     }
   }
-  // Excel serial number (Windows: 1900-based, Mac: 1904-based)
+  // Excel serial number — convert using UTC to avoid timezone shifts
   if(typeof val==="number"&&val>1){
-    // Try 1900-based first
-    const d=new Date(Math.round((val-25569)*86400*1000));
-    if(!isNaN(d.getTime())&&d.getFullYear()>=2000&&d.getFullYear()<=2100){
-      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    }
-    // Try 1904-based (Mac Excel)
-    const d2=new Date(Math.round((val-24107)*86400*1000));
-    if(!isNaN(d2.getTime())&&d2.getFullYear()>=2000&&d2.getFullYear()<=2100){
-      return `${d2.getFullYear()}-${String(d2.getMonth()+1).padStart(2,"0")}-${String(d2.getDate()).padStart(2,"0")}`;
+    // Excel serial: days since 1899-12-30 (accounting for Excel's leap year bug)
+    const days=Math.floor(val);
+    // Use UTC date math to avoid timezone issues
+    const msPerDay=86400000;
+    const epoch=new Date(Date.UTC(1899,11,30)); // 1899-12-30 UTC
+    const d=new Date(epoch.getTime()+days*msPerDay);
+    if(!isNaN(d.getTime())&&d.getUTCFullYear()>=1990&&d.getUTCFullYear()<=2100){
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}-${String(d.getUTCDate()).padStart(2,"0")}`;
     }
   }
   return null;
